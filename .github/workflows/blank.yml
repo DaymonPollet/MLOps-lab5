@@ -1,31 +1,47 @@
-name: Docker CI
+name: Docker CI with Automated Tags (Local Build)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "01_DockerTest" ] 
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main" ] 
 
 jobs:
   build-and-run-docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read 
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Build Docker image
-      run: docker build -t hello-world-nginx:v1 . # building docker image with tag
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and Tag Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        load: true # not adding this line will just give u an error
+        tags: |
+          hello-world-nginx:v1
+          hello-world-nginx:${{ github.sha }}
+          hello-world-nginx:${{ github.ref_name }}
+          hello-world-nginx:latest
 
     - name: Run Docker container
-      run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1 # runnign and mapping correct port for image
+      run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1
+      
 
     - name: Verify Nginx is running (Optional - for small demonstration)
       run: |
-        sleep 5 # Give Nginx a moment to start
-        curl http://localhost:8080 # trying to access Nginx on the mapped port
+        sleep 5 # give Nginx a moment to start and be ready
+        curl http://localhost:8080 # attempt to access Nginx on the mapped port
       shell: bash
+      # if nginx is serving, u will see the content of your index.html in the logs
 
     - name: Clean up Docker container (Optional - good practice)
-      if: always() # this step will now always run and remove container (even if previous steps failed)
-      run: docker rm -f my-nginx-container # removing the container forcefully
-    
+      if: always() # Ensures this step runs even if previous steps fail, cleaning up resources
+      run: docker rm -f my-nginx-container # forcefully removes the temporary container
