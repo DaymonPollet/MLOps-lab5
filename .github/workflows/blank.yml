@@ -19,7 +19,7 @@ jobs:
     - name: Run Docker container
       run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1 # runnign and mapping correct port for image
 
-    - name: Verify Nginx is running (Optional - for demonstration)
+    - name: Verify Nginx is running (Optional - for small demonstration)
       run: |
         sleep 5 # Give Nginx a moment to start
         curl http://localhost:8080 # trying to access Nginx on the mapped port
