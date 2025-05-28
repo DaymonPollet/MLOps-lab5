@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-run-docker:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read 
 
@@ -37,9 +37,10 @@ jobs:
 
     - name: Verify Nginx is running (Optional - for small demonstration)
       run: |
-        sleep 5 # give Nginx a moment to start and be ready
+        # Use PowerShell equivalent for sleep on Windows runner 
+        Start-Sleep -Seconds 5 # Give Nginx a moment to start and be ready
         curl http://localhost:8080 # attempt to access Nginx on the mapped port
-      shell: bash
+      # very important -> remove the 'shell: bash' line so it can use the default powershell
       # if nginx is serving, u will see the content of your index.html in the logs
 
     - name: Clean up Docker container (Optional - good practice)
