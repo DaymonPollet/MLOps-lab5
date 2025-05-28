@@ -1,41 +1,23 @@
-name: Docker CI with Advanced Tagging
+name: Docker CI
 
 on:
   push:
-    branches: [ "main", "01_DockerTest" ] # also trigger on 01_DockerTest for testing
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build-and-run-docker:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write # needed if you're pushing to gitHub packages or docker hub
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx # required for docker/build-push-action
-      uses: docker/setup-buildx-action@v3
+    - name: Build Docker image
+      run: docker build -t hello-world-nginx:v1 . # building docker image with tag
 
-    - name: Build and Push Docker image # Using the community action
-      uses: docker/build-push-action@v5
-      with:
-        context: . # path to the dockerfile's build context
-        push: false # set to true if you want to push to docker hub/GH packages
-        tags: |
-          hello-world-nginx:v1
-          hello-world-nginx:${{ github.sha }}
-          hello-world-nginx:${{ github.ref_name }}
-          hello-world-nginx:latest # This tag will be applied usually for 'main' branch
-        build-args: | # if your dockerfile used build arguments, you'd pass them here
-          MY_ARG=value
-
-    # The following steps remain the same for running and verifying locally within the runner
     - name: Run Docker container
-      run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1 # using the specific tag we said previous step
+      run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1 # runnign and mapping correct port for image
 
     - name: Verify Nginx is running (Optional - for small demonstration)
       run: |
@@ -46,3 +28,4 @@ jobs:
     - name: Clean up Docker container (Optional - good practice)
       if: always() # this step will now always run and remove container (even if previous steps failed)
       run: docker rm -f my-nginx-container # removing the container forcefully
+    
