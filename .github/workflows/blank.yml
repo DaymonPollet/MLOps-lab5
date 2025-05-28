@@ -1,34 +1,57 @@
-name: Docker CI
+name: Docker CI with Advanced Tagging
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "01_DockerTest" ] # Also trigger on 01_DockerTest for testing
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build-and-run-docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Needed if you're pushing to GitHub Packages or Docker Hub
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Build Docker image
-      run: docker build -t hello-world-nginx:v1 . # building docker image with tag
+    - name: Set up Docker Buildx # Required for docker/build-push-action
+      uses: docker/setup-buildx-action@v3
 
+    - name: Log in to Docker Hub (if pushing to Docker Hub)
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }} # Create these secrets in GitHub Repo Settings -> Secrets and variables -> Actions
+        password: ${{ secrets.DOCKER_TOKEN }}    # Or use your Docker Hub password directly (less secure)
+        # For GitHub Packages, use:
+        # username: ${{ github.actor }}
+        # password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and Push Docker image # Using the community action
+      uses: docker/build-push-action@v5
+      with:
+        context: . # Path to the Dockerfile's build context
+        push: false # Set to true if you want to push to Docker Hub/GH Packages
+        tags: |
+          hello-world-nginx:v1
+          hello-world-nginx:${{ github.sha }}
+          hello-world-nginx:${{ github.ref_name }}
+          hello-world-nginx:latest # This tag will be applied usually for 'main' branch
+        build-args: | # If your Dockerfile used build arguments, you'd pass them here
+          MY_ARG=value
+
+    # The following steps remain the same for running and verifying locally within the runner
     - name: Run Docker container
-      run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1 # runnign and mapping correct port for image
-
-    - name: Declare the sha_short and branch
-      shell: bash
-      run: |
-        echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
-        echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
-
-    - name: check branch and commit-sha
-      run: |
-      echo "Branch: ${{ env.branch }}"
-      echo "Sha: ${{ env.sha_short }}"
+      # Note: When using build-push-action, the image is available in the build cache
+      # You can run it directly by its tags or you might need to load it if push: false
+      # For simplicity, we'll assume it's available.
+      # If you encounter "image not found", you might need:
+      # - name: Load image if not pushed
+      #   run: docker load < hello-world-nginx.tar # if you saved it as an artifact or explicitly loaded it
+      # Or you might need to use the full image name if pushing to a registry.
+      run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1 # Using the specific tag
 
     - name: Verify Nginx is running (Optional - for small demonstration)
       run: |
@@ -39,4 +62,3 @@ jobs:
     - name: Clean up Docker container (Optional - good practice)
       if: always() # this step will now always run and remove container (even if previous steps failed)
       run: docker rm -f my-nginx-container # removing the container forcefully
-    
