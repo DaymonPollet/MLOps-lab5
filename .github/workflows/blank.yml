@@ -22,13 +22,13 @@ jobs:
     - name: Build and Tag Docker image
       uses: docker/build-push-action@v5
       with:
-        context: . 
-        push: false 
-        tags: | 
+        context: .
+        push: false
+        tags: |
           hello-world-nginx:v1
-          hello-world-nginx:${{ github.sha }} # Tag with the full Git commit SHA (e.g., hello-world-nginx:abcdef12345)
-          hello-world-nginx:${{ github.ref_name }} # Tag with the branch name (e.g., hello-world-nginx:main or hello-world-nginx:01_DockerTest)
-          hello-world-nginx:latest # A common tag for the latest version of your application (usually applied on 'main')
+          hello-world-nginx:${{ github.sha }}
+          hello-world-nginx:${{ github.ref_name }}
+          hello-world-nginx:latest
 
     - name: Run Docker container
       run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1
