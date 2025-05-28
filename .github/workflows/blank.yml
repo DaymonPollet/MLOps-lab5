@@ -19,6 +19,12 @@ jobs:
     - name: Run Docker container
       run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1 # runnign and mapping correct port for image
 
+    - name: Declare the sha_short and branch
+      shell: bash
+      run: |
+        echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
+        echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
+
     - name: check branch and commit-sha
       run: |
       echo "Branch: ${{ env.branch }}"
