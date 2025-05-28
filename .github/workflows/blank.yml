@@ -19,6 +19,11 @@ jobs:
     - name: Run Docker container
       run: docker run -d -p 8080:80 --name my-nginx-container hello-world-nginx:v1 # runnign and mapping correct port for image
 
+    - name: check branch and commit-sha
+      run: |
+      echo "Branch: ${{ env.branch }}"
+      echo "Sha: ${{ env.sha_short }}"
+
     - name: Verify Nginx is running (Optional - for small demonstration)
       run: |
         sleep 5 # Give Nginx a moment to start
