@@ -69,12 +69,26 @@ jobs:
           }
 
       - name: Uninstall Existing Helm Release (if exists)
-        continue-on-error: true
+        shell: powershell
         run: |
-          helm uninstall my-hello-nginx || Write-Output "No existing release found, skipping uninstall."
+          $releaseExists = helm list -q | Select-String "my-hello-nginx"
+          if ($releaseExists) {
+              helm uninstall my-hello-nginx
+              Write-Output "Previous Helm release removed."
+          } else {
+              Write-Output "No existing Helm release found, skipping uninstall."
+          }
+
+      - name: Verify Helm Chart Path
+        shell: powershell
+        run: |
+          if (!(Test-Path "$(pwd)/my-nginx-chart/Chart.yaml")) {
+              Write-Output "Helm chart directory not found! Ensure 'my-nginx-chart' exists in the repo."
+              exit 1
+          }
 
       - name: Install/Upgrade Helm Chart
-        run: helm upgrade --install my-hello-nginx ./my-nginx-chart --namespace default --atomic --wait
+        run: helm upgrade --install my-hello-nginx "$(pwd)/my-nginx-chart" --namespace default --atomic --wait
         env:
           DOCKER_IMAGE_REPO: ${{ env.IMAGE_REPO }}
           DOCKER_IMAGE_TAG: ${{ env.IMAGE_TAG }}
