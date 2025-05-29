@@ -27,23 +27,22 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Define Image Repository and set tags directly
+      # Define Image Repository and Set Tag Format (PowerShell syntax)
       - name: Define Image Repository and Set Tag Format
         id: set_image_repo
+        shell: pwsh  # Use PowerShell shell
         run: |
-          IMAGE_REPO="daymonp/hello-world-nginx"
-          IMAGE_TAG="${{ github.sha }}"
-          echo "IMAGE_REPO=${IMAGE_REPO}" >> $GITHUB_ENV
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
-          echo "Image repository: ${IMAGE_REPO}"
-          echo "Latest Tag: ${IMAGE_REPO}:latest"
-          echo "SHA Tag: ${IMAGE_REPO}:${IMAGE_TAG}"
+          $env:IMAGE_REPO = "daymonp/hello-world-nginx"
+          $env:IMAGE_TAG = "${{ github.sha }}"
           
-      - name: Debug Image Repository and Tags
-        run: |
-         echo "IMAGE_REPO: ${{ env.IMAGE_REPO }}"
-         echo "IMAGE_TAG: ${{ env.IMAGE_TAG }}"
+          # Persist to GitHub Actions environment variables
+          echo "IMAGE_REPO=$env:IMAGE_REPO" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$env:IMAGE_TAG" >> $GITHUB_ENV
 
+          # Debug: Output the values for verification
+          echo "Image repository: $env:IMAGE_REPO"
+          echo "Latest Tag: $env:IMAGE_REPO:latest"
+          echo "SHA Tag: $env:IMAGE_REPO:$env:IMAGE_TAG"
 
       # Build and Push Docker image
       - name: Build and Push Docker image
