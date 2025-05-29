@@ -28,17 +28,17 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Define Image Repository
-        id: image_repo
-        run: echo "IMAGE_REPO=daymonp/hello-world-nginx" >> $GITHUB_ENV
+        run: |
+          echo "IMAGE_REPO=daymonp/hello-world-nginx" >> $GITHUB_ENV
 
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true # ensures the image is pushed to Docker Hub
+          push: true  # ensures the image is pushed to Docker Hub
           tags: |
             ${{ env.IMAGE_REPO }}:latest
-            ${{ env.IMAGE_REPO }}:${{ github.sha }}
+            ${{ env.IMAGE_REPO }}:${{ github.sha }}  # using commit SHA for uniqueness
 
       # Kubernetes Helm deployment
       - name: Configure Kubeconfig
