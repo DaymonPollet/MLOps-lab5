@@ -32,17 +32,17 @@ jobs:
         id: set_image_repo
         shell: pwsh  # Use PowerShell shell
         run: |
-          $env:IMAGE_REPO = "daymonp/hello-world-nginx"
-          $env:IMAGE_TAG = "${{ github.sha }}"
+          $IMAGE_REPO = "daymonp/hello-world-nginx"
+          $IMAGE_TAG = "${{ github.sha }}"
           
           # Persist to GitHub Actions environment variables
-          echo "IMAGE_REPO=$env:IMAGE_REPO" >> $GITHUB_ENV
-          echo "IMAGE_TAG=$env:IMAGE_TAG" >> $GITHUB_ENV
+          "IMAGE_REPO=$IMAGE_REPO" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "IMAGE_TAG=$IMAGE_TAG" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
 
           # Debug: Output the values for verification
-          echo "Image repository: $env:IMAGE_REPO"
-          echo "Latest Tag: $env:IMAGE_REPO:latest"
-          echo "SHA Tag: $env:IMAGE_REPO:$env:IMAGE_TAG"
+          Write-Output "Image repository: $IMAGE_REPO"
+          Write-Output "Latest Tag: $IMAGE_REPO:latest"
+          Write-Output "SHA Tag: $IMAGE_REPO:$IMAGE_TAG"
 
       # Build and Push Docker image
       - name: Build and Push Docker image
@@ -67,11 +67,11 @@ jobs:
 
       - name: Install/Upgrade Helm Chart
         run: |
-          helm upgrade --install my-hello-nginx ./my-nginx-chart \
-            --namespace default \
-            --set image.repository=${{ env.IMAGE_REPO }} \
-            --set image.tag=${{ env.IMAGE_TAG }} \
-            --atomic \
+          helm upgrade --install my-hello-nginx ./my-nginx-chart `
+            --namespace default `
+            --set image.repository=${{ env.IMAGE_REPO }} `
+            --set image.tag=${{ env.IMAGE_TAG }} `
+            --atomic `
             --wait
         env:
           DOCKER_IMAGE_REPO: ${{ env.IMAGE_REPO }}
@@ -79,19 +79,19 @@ jobs:
 
       - name: Test the final result (Optional - for validation)
         run: |
-          echo "Deployment initiated. Waiting for Pods to be ready..."
+          Write-Output "Deployment initiated. Waiting for Pods to be ready..."
           kubectl get pods -n default -l app.kubernetes.io/instance=my-hello-nginx --field-selector=status.phase=Running --timeout=120s
-          echo "Pods are running. Attempting to get pod name and check logs..."
+          Write-Output "Pods are running. Attempting to get pod name and check logs..."
 
-          # Get the pod name (using `kubectl` commands instead of PowerShell)
-          POD_NAME=$(kubectl get pods -n default -l app.kubernetes.io/instance=my-hello-nginx -o jsonpath='{.items[0].metadata.name}')
-          echo "Pod name: $POD_NAME"
+          # Get the pod name in PowerShell
+          $POD_NAME = kubectl get pods -n default -l app.kubernetes.io/instance=my-hello-nginx -o jsonpath="{.items[0].metadata.name}"
+          Write-Output "Pod name: $POD_NAME"
 
-          echo "Checking Nginx logs for a successful request..."
-          kubectl logs $POD_NAME -n default | grep "GET / "
-          if [ $? -eq 0 ]; then
-            echo "Nginx served content as expected based on logs!"
-          else
-            echo "Nginx log check failed or 'GET / ' entry not found."
+          Write-Output "Checking Nginx logs for a successful request..."
+          $nginxLogs = kubectl logs $POD_NAME -n default
+          if ($nginxLogs -match "GET / ") {
+            Write-Output "Nginx served content as expected based on logs!"
+          } else {
+            Write-Output "Nginx log check failed or 'GET / ' entry not found."
             exit 1
-          fi
+          }
