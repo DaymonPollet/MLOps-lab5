@@ -30,19 +30,20 @@ jobs:
       # Define Image Repository and Set Tag Format (PowerShell syntax)
       - name: Define Image Repository and Set Tag Format
         id: set_image_repo
-        shell: pwsh  # Use PowerShell shell
+        shell: powershell  # Use Windows PowerShell instead of pwsh
         run: |
-          $IMAGE_REPO = "daymonp/hello-world-nginx"
-          $IMAGE_TAG = "${{ github.sha }}"
+          $IMAGE_REPO = "***/hello-world-nginx"
+          $IMAGE_TAG = "e15f017b0adae2511d9a112159bdca96656183f8"
           
           # Persist to GitHub Actions environment variables
-          "IMAGE_REPO=$IMAGE_REPO" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
-          "IMAGE_TAG=$IMAGE_TAG" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          Add-Content -Path $env:GITHUB_ENV -Value "IMAGE_REPO=$IMAGE_REPO"
+          Add-Content -Path $env:GITHUB_ENV -Value "IMAGE_TAG=$IMAGE_TAG"
 
           # Debug: Output the values for verification
           Write-Output "Image repository: $IMAGE_REPO"
           Write-Output "Latest Tag: $IMAGE_REPO:latest"
           Write-Output "SHA Tag: $IMAGE_REPO:$IMAGE_TAG"
+
 
       # Build and Push Docker image
       - name: Build and Push Docker image
