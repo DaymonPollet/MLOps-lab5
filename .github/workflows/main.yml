@@ -62,9 +62,13 @@ jobs:
 
       - name: Create Kubernetes Namespace (if it doesn't exist)
         run: |
-          if (!(kubectl get namespace default -ErrorAction SilentlyContinue)) {
+          $namespaceExists = kubectl get namespace default --no-headers -o custom-columns=":metadata.name"
+          if ($namespaceExists -ne "default") {
               kubectl create namespace default
+          } else {
+              Write-Output "Namespace 'default' already exists, skipping creation."
           }
+
 
 
       - name: Install/Upgrade Helm Chart
