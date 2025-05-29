@@ -39,8 +39,8 @@ jobs:
           context: .
           push: true # very important when pushing to docker hub
           tags:
-            ${{ steps.image_repo.outputs.IMAGE_REPO }}:latest
-            ${{ steps.image_repo.outputs.IMAGE_REPO }}:${{ github.sha }}
+            - ${{ steps.image_repo.outputs.IMAGE_REPO }}:latest
+            - ${{ steps.image_repo.outputs.IMAGE_REPO }}:${{ github.sha }}
 
       # kubernetes helm deployement
       - name: Configure Kubeconfig
