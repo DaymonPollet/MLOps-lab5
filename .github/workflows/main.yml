@@ -8,10 +8,10 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted # ensure Docker and Helm are installed
+    runs-on: self-hosted # Ensure Docker and Helm are installed
     permissions:
       contents: read
-      packages: write # required for pushing container registry
+      packages: write # Required for pushing container registry
 
     steps:
       - name: Checkout repository
@@ -27,18 +27,24 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Define Image Repository
+      # Set the image repository directly in a step
+      - name: Define Image Repository and Set Tag Format
+        id: set_image_repo
         run: |
           echo "IMAGE_REPO=daymonp/hello-world-nginx" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+          echo "Latest Tag: daymonp/hello-world-nginx:latest"
+          echo "SHA Tag: daymonp/hello-world-nginx:${{ github.sha }}"
 
+      # Build and Push Docker image
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true  # ensures the image is pushed to Docker Hub
+          push: true  # Ensures the image is pushed to Docker Hub
           tags: |
             ${{ env.IMAGE_REPO }}:latest
-            ${{ env.IMAGE_REPO }}:${{ github.sha }}  # using commit SHA for uniqueness
+            ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
 
       # Kubernetes Helm deployment
       - name: Configure Kubeconfig
@@ -56,12 +62,12 @@ jobs:
           helm upgrade --install my-hello-nginx ./my-nginx-chart \
             --namespace default \
             --set image.repository=${{ env.IMAGE_REPO }} \
-            --set image.tag=${{ github.sha }} \
+            --set image.tag=${{ env.IMAGE_TAG }} \
             --atomic \
             --wait
         env:
           DOCKER_IMAGE_REPO: ${{ env.IMAGE_REPO }}
-          DOCKER_IMAGE_TAG: ${{ github.sha }}
+          DOCKER_IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
       - name: Test the final result (Optional - for validation)
         run: |
