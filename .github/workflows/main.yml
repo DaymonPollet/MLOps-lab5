@@ -30,18 +30,19 @@ jobs:
       - name: Define Image Repository
         id: image_repo
         run: |
-          # --- This line has been updated ---
           echo "IMAGE_REPO=daymonp/hello-world-nginx" >> "$GITHUB_OUTPUT"
 
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true # <--- This is crucial: ensures the image is pushed to Docker Hub
-          tags: |
-            ${{ steps.image_repo.outputs.IMAGE_REPO }}:latest
-            ${{ steps.image_repo.outputs.IMAGE_REPO }}:${{ github.sha }}
-            # <--- REMOVE THIS LINE: ${{ steps.image_repo.outputs.IMAGE_REPO }}:${{ github.ref_name }} # Less ideal for unique tags
+          push: true
+          # --- THIS IS THE CRITICAL CHANGE YOU NEED TO MAKE ---
+          # Replace the 'tags: |' block with the following:
+          tags:
+            - ${{ steps.image_repo.outputs.IMAGE_REPO }}:latest
+            - ${{ steps.image_repo.outputs.IMAGE_REPO }}:${{ github.sha }}
+          # ---------------------------------------------------
 
       # kubernetes helm deployement
       - name: Configure Kubeconfig
@@ -53,8 +54,6 @@ jobs:
       - name: Create Kubernetes Namespace (if it doesn't exist)
         run: |
           kubectl get namespace default || kubectl create namespace default
-          # If you chose 'my-test-namespace' in previous steps:
-          # kubectl get namespace my-test-namespace || kubectl create namespace my-test-namespace
 
       - name: Install/Upgrade Helm Chart
         run: |
