@@ -32,7 +32,7 @@ jobs:
         id: set_image_repo
         shell: powershell
         run: |
-          $IMAGE_REPO = "your-docker-username/hello-world-nginx"  # Replace with actual username
+          $IMAGE_REPO = "daymonp/hello-world-nginx"  # Replace with actual username
           $IMAGE_TAG = "${{ github.sha }}"  # Ensures correct SHA formatting
           
           Add-Content -Path $env:GITHUB_ENV -Value "IMAGE_REPO=$IMAGE_REPO"
