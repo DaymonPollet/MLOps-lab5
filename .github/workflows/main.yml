@@ -41,9 +41,8 @@ jobs:
 
           # Debug: Output the values for verification
           Write-Output "Image repository: $IMAGE_REPO"
-          Write-Output "Latest Tag: $IMAGE_REPO:latest"
-          Write-Output "SHA Tag: $IMAGE_REPO:$IMAGE_TAG"
-
+          Write-Output "Latest Tag: ${IMAGE_REPO}:latest"
+          Write-Output "SHA Tag: ${IMAGE_REPO}:${IMAGE_TAG}"
 
       # Build and Push Docker image
       - name: Build and Push Docker image
