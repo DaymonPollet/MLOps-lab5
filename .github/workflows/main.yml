@@ -8,16 +8,15 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted  # Ensure Docker and Helm are installed
+    runs-on: self-hosted 
     permissions:
       contents: read
-      packages: write # Required for pushing container registry
+      packages: write # needed for pushing container registry
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Docker setup
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -27,7 +26,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Define Image Repository and Set Tag Format (PowerShell syntax)
       - name: Define Image Repository and Set Tag Format
         id: set_image_repo
         shell: powershell
@@ -42,17 +40,15 @@ jobs:
           Write-Output "Latest Tag: ${IMAGE_REPO}:latest"
           Write-Output "SHA Tag: ${IMAGE_REPO}:${IMAGE_TAG}"
 
-      # Build and Push Docker image
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true  # Ensures the image is pushed to Docker Hub
+          push: true  # needed to push to dockerhub
           tags: |
             ${{ env.IMAGE_REPO }}:latest
             ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
 
-      # Kubernetes Helm deployment
       - name: Configure Kubeconfig
         uses: azure/k8s-set-context@v4
         with:
@@ -99,7 +95,7 @@ jobs:
           kubectl get pods -n default -l app.kubernetes.io/instance=my-hello-nginx --field-selector=status.phase=Running --timeout=120s
           Write-Output "Pods are running. Attempting to get pod name and check logs..."
 
-          # Get the pod name in PowerShell
+          # this is how to get podname in powershell
           $POD_NAME = kubectl get pods -n default -l app.kubernetes.io/instance=my-hello-nginx -o jsonpath="{.items[0].metadata.name}"
           Write-Output "Pod name: $POD_NAME"
 
