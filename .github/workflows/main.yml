@@ -72,13 +72,7 @@ jobs:
 
 
       - name: Install/Upgrade Helm Chart
-        run: |
-          helm upgrade --install my-hello-nginx ./my-nginx-chart `
-            --namespace default `
-            --set image.repository=${{ env.IMAGE_REPO }} `
-            --set image.tag=${{ env.IMAGE_TAG }} `
-            --atomic `
-            --wait
+        run: helm upgrade --install my-hello-nginx ./my-nginx-chart --namespace default --set image.repository=hello-world-nginx --set image.tag=v1 --create-namespace --atomic --wait
         env:
           DOCKER_IMAGE_REPO: ${{ env.IMAGE_REPO }}
           DOCKER_IMAGE_TAG: ${{ env.IMAGE_TAG }}
