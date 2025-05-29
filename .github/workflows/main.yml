@@ -1,124 +1,97 @@
-name: CI/CD Pipeline
+name: Deploy Nginx App with Helm
 
 on:
   push:
-    branches:
-      - main # Trigger the workflow on pushes to the 'main' branch
-
-env:
-  # --- Global Environment Variables ---
-  # Replace with your Docker image name (e.g., your-username/your-app or ghcr.io/your-org/your-app)
-  DOCKER_IMAGE_NAME: your-docker-image-name
-  # Replace with your Kubernetes namespace (e.g., production, staging)
-  KUBERNETES_NAMESPACE: your-app-namespace
-  # Choose your deployment method: 'plain-kubernetes' or 'helm'
-  KUBERNETES_DEPLOYMENT_METHOD: plain-kubernetes # Change to 'helm' if you prefer Helm deployment
+    branches: [ "main", "01_DockerTest" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest # Specify the runner environment
+    runs-on: self-hosted  # Ensure Docker and Helm are installed
+    permissions:
+      contents: read
+      packages: write # Required for pushing container registry
 
     steps:
-      - name: 1. Clone the GitHub repository
-        uses: actions/checkout@v4 # Action to check out your repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: 2. Optional: Perform automated code checks (Unit Tests, Linting, etc.)
-        # This is a placeholder. Uncomment and replace with your actual test commands.
-        # For example:
-        # run: |
-        #   npm install # if using Node.js
-        #   npm test
-        #   ./run_lint_checks.sh
-        run: echo "Skipping automated checks for this example. Add your test commands here."
+      # Docker setup
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: 3. Log in to Docker Registry (e.g., GitHub Container Registry - GHCR)
-        # Use docker/login-action to authenticate with your Docker registry.
-        # Replace 'ghcr.io' with 'docker.io' if using Docker Hub.
-        # Ensure DOCKER_USERNAME and DOCKER_TOKEN are set as GitHub Secrets.
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io # Or docker.io for Docker Hub
-          username: ${{ github.actor }} # For GHCR, use github.actor. For Docker Hub, use your Docker Hub username.
-          password: ${{ secrets.GHCR_TOKEN }} # For GHCR, use a PAT with 'packages' scope. For Docker Hub, use DOCKER_HUB_TOKEN.
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: 4. Build and Push Docker Image
-        # Builds the Docker image and pushes it to the configured registry.
-        # It creates two tags: :latest and :<GIT-SHA>.
-        # Note: Using :latest tag might not trigger updates in Kubernetes unless ImagePullPolicy: Always is set.
-        # Semantic Versioning for tags is generally preferred for production.
+      # Define Image Repository and Set Tag Format (PowerShell syntax)
+      - name: Define Image Repository and Set Tag Format
+        id: set_image_repo
+        shell: pwsh  # Use PowerShell shell
+        run: |
+          $env:IMAGE_REPO = "daymonp/hello-world-nginx"
+          $env:IMAGE_TAG = "${{ github.sha }}"
+          
+          # Persist to GitHub Actions environment variables
+          echo "IMAGE_REPO=$env:IMAGE_REPO" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$env:IMAGE_TAG" >> $GITHUB_ENV
+
+          # Debug: Output the values for verification
+          echo "Image repository: $env:IMAGE_REPO"
+          echo "Latest Tag: $env:IMAGE_REPO:latest"
+          echo "SHA Tag: $env:IMAGE_REPO:$env:IMAGE_TAG"
+
+      # Build and Push Docker image
+      - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: . # Path to the Dockerfile build context (usually the root of the repo)
-          push: true # Push the image to the registry
+          context: .
+          push: true  # Ensures the image is pushed to Docker Hub
           tags: |
-            ${{ env.DOCKER_IMAGE_NAME }}:latest
-            ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} # Tag with the Git SHA for uniqueness
+            ${{ env.IMAGE_REPO }}:latest
+            ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
 
-      - name: 5. Set up Kubeconfig (for Kubernetes deployment)
-        # This step sets up kubectl to interact with your Kubernetes cluster.
-        # Ensure KUBE_CONFIG_BASE64 is stored as a GitHub Secret, containing the base64 encoded kubeconfig.
-        # You might need to install kubectl if not already available on the runner.
-        if: ${{ env.KUBERNETES_DEPLOYMENT_METHOD == 'plain-kubernetes' || env.KUBERNETES_DEPLOYMENT_METHOD == 'helm' }}
-        uses: azure/k8s-set-context@v3
+      # Kubernetes Helm deployment
+      - name: Configure Kubeconfig
+        uses: azure/k8s-set-context@v4
         with:
-          kubeconfig: ${{ secrets.KUBE_CONFIG_BASE64 }} # Base64 encoded kubeconfig file
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
 
-      - name: 6. Deploy to Kubernetes (Plain Kubernetes YAML)
-        if: ${{ env.KUBERNETES_DEPLOYMENT_METHOD == 'plain-kubernetes' }}
+      - name: Create Kubernetes Namespace (if it doesn't exist)
         run: |
-          echo "--- Deploying using Plain Kubernetes YAML ---"
-          # Create Kubernetes namespace if it doesn't exist
-          kubectl create namespace ${{ env.KUBERNETES_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-          echo "Namespace '${{ env.KUBERNETES_NAMESPACE }}' ensured."
+          kubectl get namespace default || kubectl create namespace default
 
-          # Change the Kubernetes YAML files to use the new image tag
-          # This assumes your deployment YAML has a placeholder for the image tag.
-          # Example: image: your-docker-image-name:TAG_PLACEHOLDER
-          # You might need to adjust 'deployment.yaml' path and the 'sed' command based on your files.
-          echo "Updating image tag in Kubernetes YAML files..."
-          sed -i "s|your-docker-image-name:.*|${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}|g" k8s/deployment.yaml
-          # Or, if you use a specific placeholder like 'TAG_PLACEHOLDER':
-          # sed -i "s|TAG_PLACEHOLDER|${{ github.sha }}|g" k8s/deployment.yaml
-
-          # Apply the Kubernetes YAML files
-          echo "Applying Kubernetes YAML files..."
-          kubectl apply -f k8s/ # Assuming all your YAMLs are in a 'k8s/' directory
-          echo "Kubernetes YAMLs applied. Deployment initiated."
-
-          # Optional: Test the final result (e.g., wait for deployment, check service readiness)
-          echo "Waiting for deployment to be ready (optional, add your specific checks here)..."
-          # kubectl rollout status deployment/your-app-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
-          echo "Plain Kubernetes deployment complete."
-
-      - name: 6. Deploy to Kubernetes (Helm)
-        if: ${{ env.KUBERNETES_DEPLOYMENT_METHOD == 'helm' }}
+      - name: Install/Upgrade Helm Chart
         run: |
-          echo "--- Deploying using Helm ---"
-          # Install Helm if not already available on the runner
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm upgrade --install my-hello-nginx ./my-nginx-chart \
+            --namespace default \
+            --set image.repository=${{ env.IMAGE_REPO }} \
+            --set image.tag=${{ env.IMAGE_TAG }} \
+            --atomic \
+            --wait
+        env:
+          DOCKER_IMAGE_REPO: ${{ env.IMAGE_REPO }}
+          DOCKER_IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
-          # Create Kubernetes namespace if it doesn't exist
-          kubectl create namespace ${{ env.KUBERNETES_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-          echo "Namespace '${{ env.KUBERNETES_NAMESPACE }}' ensured."
+      - name: Test the final result (Optional - for validation)
+        run: |
+          echo "Deployment initiated. Waiting for Pods to be ready..."
+          kubectl get pods -n default -l app.kubernetes.io/instance=my-hello-nginx --field-selector=status.phase=Running --timeout=120s
+          echo "Pods are running. Attempting to get pod name and check logs..."
 
-          # Upgrade (or install) the Helm chart
-          # Replace 'your-helm-chart-path' with the path to your Helm chart directory (e.g., chart/).
-          # Replace 'your-release-name' with the desired Helm release name.
-          # The --set flag overrides values in values.yaml, specifically the image tag.
-          echo "Upgrading/installing Helm chart..."
-          helm upgrade --install your-release-name your-helm-chart-path \
-            --namespace ${{ env.KUBERNETES_NAMESPACE }} \
-            --set image.repository=${{ env.DOCKER_IMAGE_NAME }} \
-            --set image.tag=${{ github.sha }} \
-            --wait # Wait until all resources are in a ready state
-          echo "Helm deployment complete."
+          # Get the pod name (using `kubectl` commands instead of PowerShell)
+          POD_NAME=$(kubectl get pods -n default -l app.kubernetes.io/instance=my-hello-nginx -o jsonpath='{.items[0].metadata.name}')
+          echo "Pod name: $POD_NAME"
 
-          # Optional: Test the final result (e.g., check service readiness, run integration tests)
-          echo "Testing Helm deployment (optional, add your specific checks here)..."
-          # kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }}
-          echo "Helm deployment tests complete."
-
-      - name: Cleanup Docker Login
-        # Always run this step to log out of the Docker registry
-        if: always()
-        run: docker logout ghcr.io # Or docker logout docker.io
+          echo "Checking Nginx logs for a successful request..."
+          kubectl logs $POD_NAME -n default | grep "GET / "
+          if [ $? -eq 0 ]; then
+            echo "Nginx served content as expected based on logs!"
+          else
+            echo "Nginx log check failed or 'GET / ' entry not found."
+            exit 1
+          fi
