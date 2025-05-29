@@ -40,7 +40,7 @@ jobs:
           tags:
             - ${{ steps.image_repo.outputs.IMAGE_REPO }}:latest
             - ${{ steps.image_repo.outputs.IMAGE_REPO }}:${{ github.sha }}
-          # <-- THIS IS WHERE THE PROBLEM LINE WAS. IT HAS BEEN REMOVED.
+          # ---------------------------------------------------
 
       # kubernetes helm deployement
       - name: Configure Kubeconfig
