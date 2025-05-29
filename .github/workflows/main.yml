@@ -37,11 +37,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true # <--- This is crucial: ensures the image is pushed to Docker Hub
-          tags: |
+          push: true # very important when pushing to docker hub
+          tags:
             ${{ steps.image_repo.outputs.IMAGE_REPO }}:latest
             ${{ steps.image_repo.outputs.IMAGE_REPO }}:${{ github.sha }}
-            # <--- REMOVE THIS LINE: ${{ steps.image_repo.outputs.IMAGE_REPO }}:${{ github.ref_name }} # Less ideal for unique tags
 
       # kubernetes helm deployement
       - name: Configure Kubeconfig
