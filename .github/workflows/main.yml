@@ -42,7 +42,6 @@ jobs:
           Write-Output "Latest Tag: ${IMAGE_REPO}:latest"
           Write-Output "SHA Tag: ${IMAGE_REPO}:${IMAGE_TAG}"
 
-
       # Build and Push Docker image
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
@@ -69,10 +68,13 @@ jobs:
               Write-Output "Namespace 'default' already exists, skipping creation."
           }
 
-
+      - name: Uninstall Existing Helm Release (if exists)
+        continue-on-error: true
+        run: |
+          helm uninstall my-hello-nginx || Write-Output "No existing release found, skipping uninstall."
 
       - name: Install/Upgrade Helm Chart
-        run: helm upgrade --install my-hello-nginx ./my-nginx-chart --namespace default --set image.repository=hello-world-nginx --set image.tag=v1 --create-namespace --atomic --wait
+        run: helm upgrade --install my-hello-nginx ./my-nginx-chart --namespace default --atomic --wait
         env:
           DOCKER_IMAGE_REPO: ${{ env.IMAGE_REPO }}
           DOCKER_IMAGE_TAG: ${{ env.IMAGE_TAG }}
