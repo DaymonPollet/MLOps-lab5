@@ -62,7 +62,10 @@ jobs:
 
       - name: Create Kubernetes Namespace (if it doesn't exist)
         run: |
-          kubectl get namespace default || kubectl create namespace default
+          if (!(kubectl get namespace default -ErrorAction SilentlyContinue)) {
+              kubectl create namespace default
+          }
+
 
       - name: Install/Upgrade Helm Chart
         run: |
